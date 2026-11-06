@@ -9,6 +9,7 @@ Their packages come from [conda-forge](https://conda-forge.org/), on `ubuntu` LT
 | `ghcr.io/linz/li-pdal-docker` | `pdal`            | `pdal`, GDAL programs, Python 3.15                             |
 
 Both are built with [pixi](https://pixi.prefix.dev/) from one environment solve (`pixi.toml`, `pixi.lock`), so they share the same Python, PROJ and GDAL libraries.
+This also means PDAL's GDAL requirement limits the GDAL version in both images.
 
 Earlier images, with PDAL built from source on Ubuntu's GDAL, are at `ghcr.io/linz/pdal-docker` and are no longer updated.
 
@@ -29,6 +30,8 @@ ENV PATH="/venv/bin:$PATH"
 
 Your `requires-python` must match the images' Python. The entrypoint is `tini`.
 
+The images have no compiler, so Python packages with compiled code need wheels, or a compiler added in your builder stage.
+
 ## Building
 
 ```bash
@@ -38,7 +41,7 @@ docker build --target pdal --tag li-pdal-docker .
 
 ## Publishing
 
-Every push to `master` builds both images, reads the GDAL or PDAL version from each image, and publishes two tags for each: `<version>` and `<version>-<short sha>`.
+Every push to `master` builds both images, reads the GDAL or PDAL version from each image, and publishes two tags for each: `<version>` and `<version>-<short sha>`. Both images are published even when a change only affects one of them.
 The second (`<version>-<short sha>`) distinguishes rebuilds that do not change the GDAL or PDAL version, such as a Python, PROJ or Ubuntu update.
 
 Pull requests build and verify without publishing.

@@ -6,7 +6,7 @@ requires-pixi = ">=0.82.1"
 # Minimum package age. Exempt a package below to take an urgent fix sooner.
 exclude-newer = "2d"
 
-# Every image has Python, for the uv environments built on top, and tini as the init process
+# Every image has Python, for the virtual environments users build on top, and tini as the init process
 [dependencies]
 python = "3.15.*" # images' users pin requires-python to this
 tini = "*"

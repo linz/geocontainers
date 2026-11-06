@@ -1,8 +1,8 @@
 # GDAL and PDAL base images, with Python, from conda-forge on Ubuntu LTS.
 # Published as `ghcr.io/linz/li-gdal-docker` and `ghcr.io/linz/li-pdal-docker`.
 # Build one with `docker build --target gdal .` or `--target pdal`.
-# Users add their Python packages to a virtual environment on the image's Python, e.g. with
-# `UV_PYTHON=$CONDA_PREFIX/bin/python UV_PYTHON_PREFERENCE=only-system uv sync`.
+# Users add their Python packages to a virtual environment on the image's Python, `$CONDA_PREFIX/bin/python`.
+# The README has an example.
 
 FROM ghcr.io/prefix-dev/pixi:0.82.1@sha256:f83a5fc6d1bb9a2ced27faf2b26c04c5eb618eed22fe13eb60f9225db4817ce0 AS builder
 
@@ -17,13 +17,12 @@ COPY pixi.toml pixi.lock ./
 RUN pixi install --locked --environment gdal \
     && pixi install --locked --environment pdal
 
-# Headers, static libraries, docs and Python's test suite aren't needed at run time
-RUN for environment in gdal pdal; do \
-        (cd ".pixi/envs/${environment}" && rm -rf include lib/*.a lib/python3.*/test share/doc share/info share/man); \
-    done
-
 # Binary redistribution must reproduce the packages' licences (e.g. clause 2 of PDAL's BSD licence).
-# Copy each installed package's licence files to licenses/<package>-<version>-<build>/ in its environment.
+# Copy each installed package's licence files to licenses/<package>-<version>-<build>/ in its environment,
+# and fail the build if a package has none, except for packages known not to need them:
+# - GCC's runtime libraries install their runtime exception under share/licenses, the GPL-3.0 text is in
+#   Ubuntu's /usr/share/common-licenses, and their `-ng` and `libgfortran` packages are empty
+# - SQLite is public domain
 RUN for environment in gdal pdal; do \
         for record in ".pixi/envs/${environment}"/conda-meta/*.json; do \
             package=$(basename "${record}" .json); \
@@ -31,9 +30,14 @@ RUN for environment in gdal pdal; do \
                 mkdir -p ".pixi/envs/${environment}/licenses/${package}" \
                 && cp -R "${PIXI_CACHE_DIR}/pkgs/${package}/info/licenses/." ".pixi/envs/${environment}/licenses/${package}/" \
                 || exit 1; \
+            else \
+                case "${package}" in \
+                    libgcc-[0-9]*|libgcc-ng-[0-9]*|libgomp-[0-9]*|libstdcxx-[0-9]*|libstdcxx-ng-[0-9]*) ;; \
+                    libgfortran-[0-9]*|libgfortran5-[0-9]*|libsqlite-[0-9]*|sqlite-[0-9]*) ;; \
+                    *) echo "no licence files for ${package} in the ${environment} environment"; exit 1 ;; \
+                esac; \
             fi; \
         done; \
-        [ -n "$(ls ".pixi/envs/${environment}/licenses")" ] || { echo "no licences found for ${environment}"; exit 1; }; \
     done
 
 # Record which variables activating each environment sets, so the images can check their ENV covers them
@@ -57,8 +61,8 @@ RUN apt-get update \
 
 LABEL org.opencontainers.image.source="https://github.com/linz/pdal-docker"
 
-# The environments' activation is ENV rather than an entrypoint script, so it still applies
-# when the entrypoint is overridden (Kubernetes `command:`, `docker run --entrypoint`).
+# In the gdal and pdal stages below, the environments' activation is ENV rather than an entrypoint script,
+# so it still applies when the entrypoint is overridden (Kubernetes `command:`, `docker run --entrypoint`).
 # PROJ_NETWORK differs on purpose: activation turns it on because the large `proj-data` grid package
 # isn't installed, but keeping it off is PROJ's default and avoids grid downloads at run time.
 
