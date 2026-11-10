@@ -1,2 +1,8 @@
 .idea/
 node_modules/
+
+.claude/
+CLAUDE.local.md
+.vscode/
+.DS_Store
+.env
