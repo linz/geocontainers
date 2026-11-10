@@ -41,7 +41,7 @@ docker build --target pdal --tag li-pdal-docker .
 
 ## Publishing
 
-Every push to `master` builds both images, reads the GDAL or PDAL version from each image, and publishes two tags for each: `<version>` and `<version>-<short sha>`. Both images are published even when a change only affects one of them.
+Every push to `master` builds both images, reads the version of the GDAL or PDAL package installed in each image, and publishes two tags for each: `<version>` and `<version>-<short sha>`. Both images are published even when a change only affects one of them.
 The second (`<version>-<short sha>`) distinguishes rebuilds that do not change the GDAL or PDAL version, such as a Python, PROJ or Ubuntu update.
 
 Pull requests build and verify without publishing.

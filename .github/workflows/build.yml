@@ -59,11 +59,16 @@ jobs:
         # linux/arm64 also needs linux-aarch64 in pixi.toml's platforms
         platform: [linux/amd64]
         include:
-          # Where each target is published (also in the publish job)
+          # Where each target is published (also in the publish job),
+          # the conda package whose version it is tagged with, and its main program
           - target: gdal
             image: ghcr.io/linz/li-gdal-docker
+            package: libgdal-core
+            program: gdalinfo
           - target: pdal
             image: ghcr.io/linz/li-pdal-docker
+            package: libpdal-core
+            program: pdal
           - platform: linux/amd64
             runner: ubuntu-latest
           # - platform: linux/arm64
@@ -93,34 +98,25 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform }}
           cache-to: ${{ github.ref == 'refs/heads/master' && format('type=gha,mode=max,scope={0}-{1}', matrix.target, matrix.platform) || '' }}
 
-      # The version comes from pixi.lock, so read it from the built image rather than repeating it
+      # The version comes from pixi.lock. Read it from the package records in the built image (conda-meta/*.json,
+      # written when each package is installed), so the tag matches the image and not a program's output format.
       - name: Read the version the image will be tagged with
         id: version
         env:
           TARGET: ${{ matrix.target }}
+          PACKAGE: ${{ matrix.package }}
+          PROGRAM: ${{ matrix.program }}
         run: |
-          case "$TARGET" in
-            gdal)
-              reported="$(docker run --rm --network none gdal:ci gdalinfo --version)"
-              pattern='^GDAL ([0-9]+\.[0-9]+\.[0-9]+)[ ,]'
-              ;;
-            pdal)
-              reported="$(docker run --rm --network none pdal:ci pdal --version)"
-              pattern='pdal ([0-9]+\.[0-9]+\.[0-9]+) '
-              ;;
-            *)
-              echo "::error::no version check for target ${TARGET}"
-              exit 1
-              ;;
-          esac
-          reported="${reported//$'\r'/}"
-          echo "${reported}"
+          docker run --rm --network none "${TARGET}:ci" "${PROGRAM}" --version
           docker run --rm --network none "${TARGET}:ci" python --version
-          if [[ ! "$reported" =~ $pattern ]]; then
-            echo "::error::could not read the ${TARGET} version from the image"
+          version="$(docker run --rm --network none "${TARGET}:ci" sh -c 'cat "${CONDA_PREFIX}"/conda-meta/*.json' \
+            | jq --raw-output --arg name "${PACKAGE}" 'select(.name == $name) | .version')"
+          if [[ ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]]; then
+            echo "::error::expected one ${PACKAGE} version in the image, found '${version}'"
             exit 1
           fi
-          echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "${PACKAGE} ${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
         if: env.PUBLISH == 'true'
