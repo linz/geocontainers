@@ -38,9 +38,21 @@ jobs:
           docker rm "${container}" > /dev/null
           echo "${RUNNER_TEMP}/pixi" >> "${GITHUB_PATH}"
 
+      # The pull request body is a table of the changes, made with the runner's jq rather than a downloaded tool:
+      # code run in this job could change .git before the next step pushes with a write token
       - name: Update pixi.lock
         run: |
-          pixi update --json | pixi exec --spec pixi-diff-to-markdown==0.3.11 pixi-diff-to-markdown > "${RUNNER_TEMP}/diff.md"
+          pixi update --json | jq --raw-output '
+            def file: if . == null then "none" else .conda | split("/") | last | sub("\\.(conda|tar\\.bz2)$"; "") | split("-") | "\(.[-2]) `\(.[-1])`" end;
+            [.environment | to_entries[] | .key as $environment | .value[][]
+              | {name, explicit, $environment, before: (.before | file), after: (.after | file)}]
+            | group_by([.name, .before, .after])
+            | "**Bold** packages are named in `pixi.toml`.",
+              "",
+              "| Package | Before | After | Environments |",
+              "| --- | --- | --- | --- |",
+              (.[] | "| \(if any(.[]; .explicit) then "**\(.[0].name)**" else .[0].name end) | \(.[0].before) | \(.[0].after) | \(map(.environment) | unique | join(", ")) |")
+          ' > "${RUNNER_TEMP}/diff.md"
 
       - name: Open, update or close the pull request
         env:
