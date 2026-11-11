@@ -69,6 +69,9 @@ RUN apt-get update \
 
 LABEL org.opencontainers.image.source="https://github.com/linz/pdal-docker"
 
+# Fail rather than fall back to a less accurate transformation when a grid is missing
+ENV PROJ_ONLY_BEST_DEFAULT=YES
+
 # In the gdal and pdal stages below, the environments' activation is ENV rather than an entrypoint script,
 # so it still applies when the entrypoint is overridden (Kubernetes `command:`, `docker run --entrypoint`).
 # PROJ_NETWORK differs on purpose: activation turns it on because the large `proj-data` grid package
