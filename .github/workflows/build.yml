@@ -59,13 +59,11 @@ jobs:
         # linux/arm64 also needs linux-aarch64 in pixi.toml's platforms
         platform: [linux/amd64]
         include:
-          # The conda package whose version it is tagged with, and its check script
+          # The conda package whose version it is tagged with
           - target: gdal
             package: libgdal-core
-            check: checks/gdal.py
           - target: pdal
             package: libpdal-core
-            check: checks/pdal.py
           - platform: linux/amd64
             runner: ubuntu-latest
           # - platform: linux/arm64
@@ -122,8 +120,7 @@ jobs:
       - name: Check the image
         env:
           TARGET: ${{ matrix.target }}
-          CHECK: ${{ matrix.check }}
-        run: docker run --rm --interactive --network none "${TARGET}:ci" python - < "${CHECK}"
+        run: docker run --rm --interactive --network none "${TARGET}:ci" python - < "checks/${TARGET}.py"
 
       - name: Login to GitHub Container Registry
         if: env.PUBLISH == 'true'
