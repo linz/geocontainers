@@ -79,6 +79,7 @@ jobs:
       packages: write
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/li-${{ matrix.target }}-docker
+      CACHE_SCOPE: ${{ matrix.target }}-${{ matrix.platform }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,8 +97,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: true
           tags: ${{ matrix.target }}:ci
-          cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform }}
-          cache-to: ${{ github.ref == 'refs/heads/master' && format('type=gha,mode=max,scope={0}-{1}', matrix.target, matrix.platform) || '' }}
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: ${{ github.ref == 'refs/heads/master' && format('type=gha,mode=max,scope={0}', env.CACHE_SCOPE) || '' }}
 
       # The version comes from pixi.lock. Read it from the package records in the built image (conda-meta/*.json,
       # written when each package is installed), so the tag matches the image and not a program's output format.
@@ -146,7 +147,7 @@ jobs:
           context: .
           target: ${{ matrix.target }}
           platforms: ${{ matrix.platform }}
-          cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           provenance: false
           sbom: false
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
