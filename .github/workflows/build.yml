@@ -59,14 +59,12 @@ jobs:
         # linux/arm64 also needs linux-aarch64 in pixi.toml's platforms
         platform: [linux/amd64]
         include:
-          # The conda package whose version it is tagged with, its main program and its check script
+          # The conda package whose version it is tagged with, and its check script
           - target: gdal
             package: libgdal-core
-            program: gdalinfo
             check: checks/gdal.py
           - target: pdal
             package: libpdal-core
-            program: pdal
             check: checks/pdal.py
           - platform: linux/amd64
             runner: ubuntu-latest
@@ -107,9 +105,7 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           PACKAGE: ${{ matrix.package }}
-          PROGRAM: ${{ matrix.program }}
         run: |
-          docker run --rm --network none "${TARGET}:ci" "${PROGRAM}" --version
           docker run --rm --network none "${TARGET}:ci" python --version
           version="$(docker run --rm --network none "${TARGET}:ci" sh -c 'cat "${CONDA_PREFIX}"/conda-meta/*.json' \
             | jq --raw-output --arg name "${PACKAGE}" 'select(.name == $name) | .version')"

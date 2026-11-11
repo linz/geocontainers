@@ -10,6 +10,8 @@ def pdal(*args, stdin=None):
     ).stdout
 
 
+subprocess.run(["pdal", "--version"], check=True)
+
 # 100 generated points in a LAZ file
 pdal(
     "pipeline",

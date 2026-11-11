@@ -3,6 +3,8 @@
 import subprocess
 from osgeo import gdal, osr
 
+subprocess.run(["gdalinfo", "--version"], check=True)
+
 gdal.UseExceptions()
 
 # A 3x3 raster with a nodata hole in the middle
