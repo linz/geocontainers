@@ -59,15 +59,12 @@ jobs:
         # linux/arm64 also needs linux-aarch64 in pixi.toml's platforms
         platform: [linux/amd64]
         include:
-          # Where each target is published (also in the publish job),
-          # the conda package whose version it is tagged with, its main program and its check script
+          # The conda package whose version it is tagged with, its main program and its check script
           - target: gdal
-            image: ghcr.io/linz/li-gdal-docker
             package: libgdal-core
             program: gdalinfo
             check: checks/gdal.py
           - target: pdal
-            image: ghcr.io/linz/li-pdal-docker
             package: libpdal-core
             program: pdal
             check: checks/pdal.py
@@ -80,6 +77,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/li-${{ matrix.target }}-docker
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -150,7 +149,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.target }}-${{ matrix.platform }}
           provenance: false
           sbom: false
-          outputs: type=image,name=${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Write the digest and version to files
         if: env.PUBLISH == 'true'
@@ -181,16 +180,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Where each target is published (also in the build job)
-          - target: gdal
-            image: ghcr.io/linz/li-gdal-docker
-          - target: pdal
-            image: ghcr.io/linz/li-pdal-docker
+        target: [gdal, pdal]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/li-${{ matrix.target }}-docker
     steps:
       - name: Download the digests and version
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -211,8 +207,6 @@ jobs:
 
       - name: Tag the digests as one image
         id: tag
-        env:
-          IMAGE: ${{ matrix.image }}
         run: |
           version="$(cat /tmp/build/version)"
           if [[ ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]]; then
@@ -234,7 +228,6 @@ jobs:
 
       - name: Report the reference to pin
         env:
-          IMAGE: ${{ matrix.image }}
           VERSION: ${{ steps.tag.outputs.version }}
         run: |
           digest="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{ .Manifest.Digest }}')"
