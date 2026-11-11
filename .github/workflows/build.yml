@@ -60,15 +60,17 @@ jobs:
         platform: [linux/amd64]
         include:
           # Where each target is published (also in the publish job),
-          # the conda package whose version it is tagged with, and its main program
+          # the conda package whose version it is tagged with, its main program and its check script
           - target: gdal
             image: ghcr.io/linz/li-gdal-docker
             package: libgdal-core
             program: gdalinfo
+            check: checks/gdal.py
           - target: pdal
             image: ghcr.io/linz/li-pdal-docker
             package: libpdal-core
             program: pdal
+            check: checks/pdal.py
           - platform: linux/amd64
             runner: ubuntu-latest
           # - platform: linux/arm64
@@ -121,48 +123,11 @@ jobs:
       # The images replace conda's activation with ENV and keep the environment at a fixed path,
       # so check what geoprocessor runs works in them, including a CRS from PROJ's database
 
-      - name: Check GDAL's scripts
-        if: matrix.target == 'gdal'
-        run: |
-          docker run --rm --interactive --network none gdal:ci python - <<'EOF'
-          import subprocess
-          from osgeo import gdal, osr
-
-          gdal.UseExceptions()
-
-          # A 3x3 raster with a nodata hole in the middle
-          dataset = gdal.GetDriverByName("GTiff").Create("/tmp/hole.tif", 3, 3, 1, gdal.GDT_Byte)
-          dataset.GetRasterBand(1).SetNoDataValue(0)
-          dataset.GetRasterBand(1).WriteRaster(0, 0, 3, 3, bytes([1, 1, 1, 1, 0, 1, 1, 1, 1]))
-          dataset = None
-
-          subprocess.run(["gdal_edit", "-a_srs", "EPSG:2193", "/tmp/hole.tif"], check=True)
-          subprocess.run(["gdal_fillnodata", "-q", "/tmp/hole.tif", "/tmp/filled.tif"], check=True)
-
-          filled = gdal.Open("/tmp/filled.tif")
-          assert filled.GetRasterBand(1).ReadRaster() == bytes([1] * 9), list(filled.GetRasterBand(1).ReadRaster())
-          assert osr.SpatialReference(filled.GetProjection()).GetAuthorityCode(None) == "2193", filled.GetProjection()
-          EOF
-
-      - name: Check PDAL with a LAZ file
-        if: matrix.target == 'pdal'
-        run: |
-          docker run --rm --interactive --network none pdal:ci python - <<'EOF'
-          import json
-          import subprocess
-
-          def pdal(*args, stdin=None):
-              return subprocess.run(["pdal", *args], input=stdin, stdout=subprocess.PIPE, text=True, check=True).stdout
-
-          # 100 generated points in a LAZ file
-          pdal("pipeline", "--stdin", stdin=json.dumps([{"type": "readers.faux", "count": 100, "mode": "ramp", "bounds": "([0, 100], [0, 100], [0, 10])"}, "/tmp/points.laz"]))
-
-          pdal("translate", "/tmp/points.laz", "/tmp/translated.laz", "--readers.las.spatialreference=EPSG:2193+7839", "--writers.las.filesource_id=0", "--writers.las.forward=all")
-
-          metadata = json.loads(pdal("info", "--metadata", "/tmp/translated.laz"))["metadata"]
-          result = {"count": metadata["count"], "compressed": metadata["compressed"], "srs": [component["id"]["code"] for component in metadata["srs"]["json"]["components"]]}
-          assert result == {"count": 100, "compressed": True, "srs": [2193, 7839]}, result
-          EOF
+      - name: Check the image
+        env:
+          TARGET: ${{ matrix.target }}
+          CHECK: ${{ matrix.check }}
+        run: docker run --rm --interactive --network none "${TARGET}:ci" python - < "${CHECK}"
 
       - name: Login to GitHub Container Registry
         if: env.PUBLISH == 'true'
