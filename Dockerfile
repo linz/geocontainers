@@ -49,6 +49,14 @@ RUN for environment in gdal pdal; do \
         | sort > "activation-variables-${environment}"; \
     done
 
+# LINZ's PROJ grids, pinned by proj-grids.sha256
+COPY proj-grids.sha256 ./
+RUN pixi run --frozen --environment gdal projsync --source-id nz_linz --target-dir /opt/proj-grids \
+    && cd /opt/proj-grids \
+    && rm -f cache.db files.geojson \
+    && sha256sum --check --strict --quiet /opt/pixi/proj-grids.sha256 \
+    && [ "$(ls | wc -l)" -eq "$(wc -l < /opt/pixi/proj-grids.sha256)" ]
+
 FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c AS ubuntu
 
 # Ubuntu `main` fixes published since the base image was built, and Ubuntu's tzdata (also `main`):
@@ -78,6 +86,8 @@ ENV PATH="$CONDA_PREFIX/bin:$PATH" \
     PROJ_DATA="$CONDA_PREFIX/share/proj" \
     PROJ_NETWORK=OFF
 
+COPY --from=builder /opt/proj-grids/ $CONDA_PREFIX/share/proj/
+
 # Fail the build if a package's activation script sets a variable the ENV above doesn't
 COPY --from=builder /opt/pixi/activation-variables-gdal /tmp/activation-variables
 RUN ! env | cut --delimiter='=' --fields=1 | sort | comm -23 /tmp/activation-variables - | grep . \
@@ -97,6 +107,8 @@ ENV PATH="$CONDA_PREFIX/bin:$PATH" \
     PDAL_DRIVER_PATH="$CONDA_PREFIX/lib" \
     PROJ_DATA="$CONDA_PREFIX/share/proj" \
     PROJ_NETWORK=OFF
+
+COPY --from=builder /opt/proj-grids/ $CONDA_PREFIX/share/proj/
 
 # Fail the build if a package's activation script sets a variable the ENV above doesn't
 COPY --from=builder /opt/pixi/activation-variables-pdal /tmp/activation-variables
