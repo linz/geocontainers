@@ -37,6 +37,8 @@ The images have no compiler, so Python packages with compiled code need wheels, 
 ```bash
 docker build --target gdal --tag li-gdal-docker .
 docker build --target pdal --tag li-pdal-docker .
+docker run --rm --interactive --network none li-gdal-docker python - < checks/gdal.py
+docker run --rm --interactive --network none li-pdal-docker python - < checks/pdal.py
 ```
 
 ## Publishing
