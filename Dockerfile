@@ -4,7 +4,7 @@
 # Users add their Python packages to a virtual environment on the image's Python, `$CONDA_PREFIX/bin/python`.
 # The README has an example.
 
-FROM ghcr.io/prefix-dev/pixi:0.82.1@sha256:f83a5fc6d1bb9a2ced27faf2b26c04c5eb618eed22fe13eb60f9225db4817ce0 AS builder
+FROM ghcr.io/prefix-dev/pixi:0.84.2@sha256:8201f134655a8261f382ee565ddf1498e5f215887bb14e812e1f47c09f4f7196 AS builder
 
 # conda environments aren't relocatable: the images keep them at this path
 WORKDIR /opt/pixi
