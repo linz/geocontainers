@@ -1,5 +1,4 @@
-# Only the pixi manifest, lockfile and grid checksums are needed
+# Only the pixi manifest and lockfile are needed
 *
 !pixi.lock
 !pixi.toml
-!proj-grids.sha256

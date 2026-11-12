@@ -49,13 +49,11 @@ RUN for environment in gdal pdal; do \
         | sort > "activation-variables-${environment}"; \
     done
 
-# LINZ's PROJ grids, pinned by proj-grids.sha256
-COPY proj-grids.sha256 ./
-RUN pixi run --frozen --environment gdal projsync --source-id nz_linz --target-dir /opt/proj-grids \
-    && cd /opt/proj-grids \
-    && rm -f cache.db files.geojson \
-    && sha256sum --check --strict --quiet /opt/pixi/proj-grids.sha256 \
-    && [ "$(ls | wc -l)" -eq "$(wc -l < /opt/pixi/proj-grids.sha256)" ]
+# LINZ's PROJ grids, without keeping the rest of proj-data
+RUN pixi install --locked --environment grids \
+    && mkdir /opt/proj-grids \
+    && cp .pixi/envs/grids/share/proj/nz_linz_* /opt/proj-grids/ \
+    && rm -rf .pixi/envs/grids "${PIXI_CACHE_DIR}"/pkgs/proj-data-*
 
 FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c AS ubuntu
 
