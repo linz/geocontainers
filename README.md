@@ -11,6 +11,9 @@ Their packages come from [conda-forge](https://conda-forge.org/), on `ubuntu` LT
 Both are built with [pixi](https://pixi.prefix.dev/) from one environment solve (`pixi.toml`, `pixi.lock`), so they share the same Python, PROJ and GDAL libraries.
 This also means PDAL's GDAL requirement limits the GDAL version in both images.
 
+Both have LINZ's PROJ grids (`nz_linz_*`, copied from conda-forge's `proj-data`), and `PROJ_ONLY_BEST_DEFAULT=YES` makes a transformation fail rather than fall back to a less accurate one when its grid is missing.
+PDAL's `filters.reprojection` drops the points it can't transform unless `error_on_failure` is set.
+
 Earlier images, with PDAL built from source on Ubuntu's GDAL, are at `ghcr.io/linz/pdal-docker` and are no longer updated.
 
 ## Usage
@@ -58,4 +61,4 @@ The digests to pin are printed in the workflow run summary.
 
 ## License
 
-This repository is MIT licensed. The images redistribute conda-forge packages under their own licences, reproduced at `$CONDA_PREFIX/licenses/<package>-<version>-<build>/`.
+This repository is MIT licensed. The images redistribute conda-forge packages under their own licences, reproduced at `$CONDA_PREFIX/licenses/<package>-<version>-<build>/`, and LINZ's PROJ grids under CC BY 4.0 (`$CONDA_PREFIX/share/proj/nz_linz_README.txt`).

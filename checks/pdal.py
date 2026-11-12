@@ -47,3 +47,33 @@ result = {
     ],
 }
 assert result == {"count": 100, "compressed": True, "srs": [2193, 7839]}, result
+
+# NZVD2016 to ellipsoidal heights use LINZ's geoid grid
+pdal(
+    "pipeline",
+    "--stdin",
+    stdin=json.dumps(
+        [
+            {
+                "type": "readers.faux",
+                "count": 1,
+                "mode": "constant",
+                "bounds": "([1748978, 1748978], [5427288, 5427288], [100, 100])",
+                "override_srs": "EPSG:2193+7839",
+            },
+            {
+                "type": "filters.reprojection",
+                "out_srs": "EPSG:4959",
+                "error_on_failure": True,
+            },
+            {
+                "type": "writers.text",
+                "filename": "/tmp/ellipsoidal.txt",
+                "order": "Z:3",
+                "keep_unspecified": False,
+            },
+        ]
+    ),
+)
+with open("/tmp/ellipsoidal.txt") as heights:
+    assert heights.read().split()[1:] == ["113.029"]

@@ -49,6 +49,12 @@ RUN for environment in gdal pdal; do \
         | sort > "activation-variables-${environment}"; \
     done
 
+# LINZ's PROJ grids, without keeping the rest of proj-data
+RUN pixi install --locked --environment grids \
+    && mkdir /opt/proj-grids \
+    && cp .pixi/envs/grids/share/proj/nz_linz_* /opt/proj-grids/ \
+    && rm -rf .pixi/envs/grids "${PIXI_CACHE_DIR}"/pkgs/proj-data-*
+
 FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c AS ubuntu
 
 # Ubuntu `main` fixes published since the base image was built, and Ubuntu's tzdata (also `main`):
@@ -60,6 +66,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 LABEL org.opencontainers.image.source="https://github.com/linz/pdal-docker"
+
+# Fail rather than fall back to a less accurate transformation when a grid is missing
+ENV PROJ_ONLY_BEST_DEFAULT=YES
 
 # In the gdal and pdal stages below, the environments' activation is ENV rather than an entrypoint script,
 # so it still applies when the entrypoint is overridden (Kubernetes `command:`, `docker run --entrypoint`).
@@ -77,6 +86,8 @@ ENV PATH="$CONDA_PREFIX/bin:$PATH" \
     GDAL_DRIVER_PATH="$CONDA_PREFIX/lib/gdalplugins" \
     PROJ_DATA="$CONDA_PREFIX/share/proj" \
     PROJ_NETWORK=OFF
+
+COPY --from=builder /opt/proj-grids/ $CONDA_PREFIX/share/proj/
 
 # Fail the build if a package's activation script sets a variable the ENV above doesn't
 COPY --from=builder /opt/pixi/activation-variables-gdal /tmp/activation-variables
@@ -97,6 +108,8 @@ ENV PATH="$CONDA_PREFIX/bin:$PATH" \
     PDAL_DRIVER_PATH="$CONDA_PREFIX/lib" \
     PROJ_DATA="$CONDA_PREFIX/share/proj" \
     PROJ_NETWORK=OFF
+
+COPY --from=builder /opt/proj-grids/ $CONDA_PREFIX/share/proj/
 
 # Fail the build if a package's activation script sets a variable the ENV above doesn't
 COPY --from=builder /opt/pixi/activation-variables-pdal /tmp/activation-variables
