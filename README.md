@@ -1,4 +1,4 @@
-# pdal-docker
+# geocontainers
 
 [GDAL](https://gdal.org/) and [PDAL](https://pdal.io/) base images with Python, used for LINZ raster and point cloud processing containers.
 Their packages come from [conda-forge](https://conda-forge.org/), on `ubuntu` LTS with Ubuntu's `main` fixes and time zone data.

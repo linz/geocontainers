@@ -1,8 +1,8 @@
 {
-  "name": "@linzjs/pdal-docker",
+  "name": "@linzjs/geocontainers",
   "version": "1.0.0",
   "private": true,
-  "repository": "git@github.com:linz/pdal-docker.git",
+  "repository": "git@github.com:linz/geocontainers.git",
   "license": "MIT",
   "scripts": {
     "lint": "oxfmt . --write",
