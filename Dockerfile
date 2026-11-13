@@ -65,7 +65,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes --no-install-recommends tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-LABEL org.opencontainers.image.source="https://github.com/linz/pdal-docker"
+LABEL org.opencontainers.image.source="https://github.com/linz/geocontainers"
 
 # Fail rather than fall back to a less accurate transformation when a grid is missing
 ENV PROJ_ONLY_BEST_DEFAULT=YES
