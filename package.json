@@ -12,6 +12,6 @@
     "node": "^24.5.0"
   },
   "devDependencies": {
-    "oxfmt": "^0.74.0"
+    "oxfmt": "^0.75.0"
   }
 }
